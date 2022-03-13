@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- Bootstrap -->
+    <link href="http://tools.jb51.net/static/skin/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Styles -->
+    <link href="http://tools.jb51.net/static/skin/css/theme.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.3.1/echarts.js"></script>
+    <style>
+        .container {
+            width: 1000px;
+            margin: 0 auto
+        }
+
+        /* .container ol {
+            margin: 10px 0;
+            padding-left: 25px
+        }
+
+        .container ol li {
+            margin: 10px 0;
+            font-size: 15px
+        } */
+
+        .container .two {
+            width: 16%
+        }
+
+        .container .eight {
+            width: 64%
+        }
+
+        .container .row {
+            min-height: 2em;
+            line-height: 2em;
+            width: 100%;
+            font-size: 16px
+        }
+
+        .container .row:before,
+        .container .row:after {
+            content: '\0020';
+            display: block;
+            overflow: hidden;
+            visibility: hidden;
+            width: 0;
+            height: 0
+        }
+
+        .container .row:after {
+            clear: both
+        }
+
+        .container .row {
+            zoom: 1;
+            margin: 10px 0
+        }
+
+        .container .span {
+            float: left;
+            display: inline;
+            min-height: 1em
+        }
+
+        .container .span:first-child {
+            margin-left: 0
+        }
+
+        .container .span:last-child {
+            margin-right: 0
+        }
+
+        /* .container .green {
+            color: green !important
+        } */
+
+        .container .strong {
+            font-weight: bold
+        }
+
+        .container input {
+            text-align: left;
+            border: 1px solid #CCC;
+            border-radius: 5px;
+            font-size: .98em
+        }
+
+        .container .input-text {
+            width: 95%;
+            height: 2.1em;
+            line-height: 2.1em;
+            padding-left: 5px
+        }
+
+        .container .alert {
+            padding: 10px;
+            margin: 0;
+            border-radius: 3px
+        }
+
+        .container .alert.primary {
+            background: #e8eff3;
+            border: 1px #c5d7e3 solid
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div class="alert primary">
+        <div id="function_curve" style="width: 100%;height: 300px;"></div>
+    </div>
+    <div class='container'>
+        <form action="" name="name_form" method="get">
+            <div class='row'>
+                <div class='span two xs-three strong'>函数F(x): </div>
+                <div class='span eight xs-eight'>
+                    <input type="text" class="input-text" placeholder="输入Javascript函数表达式如：Math.sin(x)"
+                        value="Math.sin(x)" id="function_input"></input>
+                </div>
+            </div>
+            <div class='row'>
+                <div class='span two xs-three strong'>x取值范围:</div>
+                <div class='span two xs-three'>
+                    <input type="number" class="input-text" value="-10" id="x_start_input"></input>
+                </div>
+                <div class='span'>~</div>
+                <div class='span two xs-three'>
+                    <input type="number" class="input-text" value="10" id="x_end_input"></input>
+                </div>
+                <div class='span two xs-three'>
+                    <button type="button" class='btn btn-primary' onclick="javascript:plot();">绘制F(x)曲线</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+
+    <div class="well">
+        <div id="SOHUCS" sid="fun_draw"></div>
+    </div>
+
+    <script>
+        var plot_cnt = 1000;//点数
+
+        function get_line_option (text, subtext, yAxis_name, y_format, x_data, y_data) {
+            option = {
+                title: {
+                    text: text,
+                    subtext: subtext
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                grid: {
+                    x: 60, y: 60, x2: 25, y2: 25
+                },
+                toolbox: {
+                    show: true,
+                    feature: {
+                        mark: { show: true },
+                        dataZoom: { show: true },
+                        dataView: { show: true, readOnly: false },
+                        magicType: { show: true, type: ['line', 'bar'] },
+                        restore: { show: true },
+                        saveAsImage: { show: true }
+                    }
+                },
+                dataZoom: {
+                    show: false,
+                    start: 0,
+                    end: plot_cnt
+                },
+                xAxis: [{
+                    type: 'category',
+                    boundaryGap: true,
+                    name: 'x',
+                    data: x_data
+                }],
+                yAxis: [{
+                    type: 'value',
+                    scale: true,
+                    name: yAxis_name,
+                    axisLabel: {
+                        formatter: '{value} ' + y_format
+                    }
+                }],
+                series: [{
+                    name: yAxis_name,
+                    type: 'line',
+                    data: y_data
+                }]
+            };
+            return option;
+        }
+
+        function $_ (id) {
+            return document.getElementById(id);
+        }
+
+        function exec (func, x) {
+            try {
+                var tmp_func = func.replace(new RegExp(/(exp)/g), '___');
+                tmp_func = tmp_func.replace(new RegExp(/(x)/g), x);
+                tmp_func = tmp_func.replace(new RegExp(/(___)/g), 'exp');
+                return eval(tmp_func);
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        function plot () {
+
+            var myChart = echarts.init(document.getElementById('function_curve'));
+
+            var func = $_('function_input').value;
+            //验证func
+            var tmp_func = '';
+            try {
+                tmp_func = tmp_func.replace(new RegExp(/(exp)/g), '___');
+                tmp_func = tmp_func.replace(new RegExp(/(x)/g), Math.random());
+                tmp_func = tmp_func.replace(new RegExp(/(___)/g), 'exp');
+            } catch (e) {
+                alert("填写的JavaScript函数表达式不正确，也许是JavaScript语法问题！");
+                return;
+            }
+
+            var x_start = $_('x_start_input').value;
+            var x_end = $_('x_end_input').value;
+
+            if (x_start == '' || x_start == null) {
+                x_start = -100;
+                $_('x_start_input').value = x_start;
+            }
+            x_start = parseFloat(x_start);
+            if (x_end == '' || x_end == null) {
+                x_end = -100;
+                $_('x_end_input').value = x_end;
+            }
+            x_end = parseFloat(x_end);
+
+            if (x_end - x_start < 1.0) {
+                alert('X的范围至少为1.0!');
+                return;
+            }
+
+            //绘图
+            var step = (x_end - x_start) / plot_cnt;
+            var x_data = [];
+            var y_data = [];
+            step = Math.round(step * 1000) / 1000;//保留三位小数 
+            var y = 0;
+            var cnt = 0;
+            for (var i = x_start; cnt < plot_cnt; i = i + step) {
+                i = Math.round(i * 1000) / 1000;
+                y = exec(func, i);
+                x_data.push(i);
+                y_data.push(y);
+                cnt++;
+            }
+
+            var option = get_line_option('数学函数曲线', '函数JavaScript表达式', 'F(x)', '', x_data, y_data);
+            // 使用刚指定的配置项和数据显示图表。
+            myChart.setOption(option);
+        }
+    </script>
+    <script type="text/javascript">
+
+
+
+    </script>
+
+</body>
+
+</html>;
